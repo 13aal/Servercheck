@@ -1,0 +1,56 @@
+#!/local/usr/bin/env ruby
+
+require 'rubygems'
+require 'net/ssh/gateway'
+require '<mailgem>'
+require 'etc'
+
+############################################################
+# Server Checker, much faster then SSHing to the servers. ####
+############################################################
+
+def mail_error(e)
+  x = AD::Mail.new
+  x.from        = "<email-address>"
+  x.to          = "<email-address>"
+  x.subject     = "Server Loading Error"
+  x.body        = e.message
+  x.send
+end
+
+def scanning_all_servers(server)
+  begin
+    check = Net::SSH.start(server, @username, :password => @password)
+    cmd = "ping -c 1 #{server}"
+    check.exec!(cmd)
+  rescue => e
+    mail_error(e)
+    :error
+  end
+end
+
+def server_status(server)
+  result = scanning_all_servers(server)
+
+  message_server_online = /1 received, 0% packet loss/i
+  message_server_offline = Regexp.union('0 recieved, +1 errors', 'Connection refused' || 'Name or service not known')
+
+  result =~ message_server_online  ? :online  :
+  result =~ message_server_offline ? :offline : :error
+end
+
+def status_message(server, status)
+  status == :online  ? "server online: #{server}"  :
+  status == :offline ? "SERVER OFFLINE: #{server}" :
+                       "Error loading server: #{server}."
+end
+
+@username = Etc.getlogin
+@password = nil
+
+server_list = %w(<list of servers>)
+
+server_list.each do |server|
+  status = server_status(server)
+  puts status_message(server, status)
+end
