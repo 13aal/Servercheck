@@ -10,7 +10,7 @@ require 'etc'
 ############################################################
 
 def mail_error(e)
-  x = AD::Mail.new
+  x = MailGem::Mail.new
   x.from        = "<email-address>"
   x.to          = "<email-address>"
   x.subject     = "Server Loading Error"
